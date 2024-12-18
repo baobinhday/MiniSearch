@@ -36,6 +36,25 @@ jobs:
       - name: Delete git
         run: rm -rf .git
 
+      - name: Add YAML to README.md
+        run: |
+          echo "---" > temp_readme.md
+          echo "title: MiniSearch" >> temp_readme.md
+          echo "emoji: 👌🔍" >> temp_readme.md
+          echo "colorFrom: yellow" >> temp_readme.md
+          echo "colorTo: yellow" >> temp_readme.md
+          echo "sdk: docker" >> temp_readme.md
+          echo "short_description: Minimalist web-searching app with browser-based AI assistant" >> temp_readme.md
+          echo "pinned: true" >> temp_readme.md
+          echo "custom_headers:
+  cross-origin-embedder-policy: require-corp
+  cross-origin-opener-policy: same-origin
+  cross-origin-resource-policy: cross-origin" >> temp_readme.md
+          
+          echo "---" >> temp_readme.md
+          cat README.md >> temp_readme.md
+          mv temp_readme.md README.md
+
       - name: Configure git
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
