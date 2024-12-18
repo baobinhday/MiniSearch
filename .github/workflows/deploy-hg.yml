@@ -46,11 +46,10 @@ jobs:
           echo "sdk: docker" >> temp_readme.md
           echo "short_description: Minimalist web-searching app with browser-based AI assistant" >> temp_readme.md
           echo "pinned: true" >> temp_readme.md
-          echo "custom_headers:
-  cross-origin-embedder-policy: require-corp
-  cross-origin-opener-policy: same-origin
-  cross-origin-resource-policy: cross-origin" >> temp_readme.md
-          
+          echo "custom_headers:\
+                  cross-origin-embedder-policy: require-corp\
+                  cross-origin-opener-policy: same-origin\
+                  cross-origin-resource-policy: cross-origin" >> temp_readme.md
           echo "---" >> temp_readme.md
           cat README.md >> temp_readme.md
           mv temp_readme.md README.md
