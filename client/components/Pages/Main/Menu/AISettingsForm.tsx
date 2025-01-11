@@ -18,6 +18,10 @@ import { addLogEntry } from "../../../../modules/logEntries";
 import { getOpenAiClient } from "../../../../modules/openai";
 import { settingsPubSub } from "../../../../modules/pubSub";
 import { defaultSettings, inferenceTypes } from "../../../../modules/settings";
+import {
+  aiHordeDefaultApiKey,
+  fetchHordeModels,
+} from "../../../../modules/textGenerationWithHorde";
 import { isWebGPUAvailable } from "../../../../modules/webGpu";
 
 const WebLlmModelSelect = lazy(
@@ -41,9 +45,13 @@ export default function AISettingsForm() {
       value: string;
     }[]
   >([]);
-  const [openAiApiModelError, setOpenAiApiModelError] = useState<
-    string | undefined
-  >(undefined);
+  const [hordeModels, setHordeModels] = useState<
+    {
+      label: string;
+      value: string;
+    }[]
+  >([]);
+  const [useTextInput, setUseTextInput] = useState(false);
 
   const form = useForm({
     initialValues: settings,
@@ -63,13 +71,13 @@ export default function AISettingsForm() {
           value: model.id,
         }));
         setOpenAiModels(models);
-        setOpenAiApiModelError(undefined);
+        setUseTextInput(false);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         addLogEntry(`Error fetching OpenAI models: ${errorMessage}`);
         setOpenAiModels([]);
-        setOpenAiApiModelError(errorMessage);
+        setUseTextInput(true);
       }
     }
 
@@ -83,10 +91,26 @@ export default function AISettingsForm() {
   ]);
 
   useEffect(() => {
-    if (openAiApiModelError === form.errors.openAiApiModel) return;
+    async function fetchAvailableHordeModels() {
+      try {
+        const models = await fetchHordeModels();
+        const formattedModels = models.map((model) => ({
+          label: model.name,
+          value: model.name,
+        }));
+        setHordeModels(formattedModels);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        addLogEntry(`Error fetching AI Horde models: ${errorMessage}`);
+        setHordeModels([]);
+      }
+    }
 
-    form.setFieldError("openAiApiModel", openAiApiModelError);
-  }, [openAiApiModelError, form.setFieldError, form.errors.openAiApiModel]);
+    if (settings.inferenceType === "horde") {
+      fetchAvailableHordeModels();
+    }
+  }, [settings.inferenceType]);
 
   useEffect(() => {
     if (openAiModels.length > 0) {
@@ -107,14 +131,6 @@ export default function AISettingsForm() {
   const handleRestoreDefaultInstructions = () => {
     form.setFieldValue("systemPrompt", defaultSettings.systemPrompt);
   };
-
-  const suggestedCpuThreads =
-    (navigator.hardwareConcurrency &&
-      Math.max(
-        defaultSettings.cpuThreads,
-        navigator.hardwareConcurrency - 2,
-      )) ??
-    defaultSettings.cpuThreads;
 
   return (
     <Stack gap="md">
@@ -179,15 +195,46 @@ export default function AISettingsForm() {
                 type="password"
                 description="Optional, as local API servers usually do not require it."
               />
-              <Select
-                {...form.getInputProps("openAiApiModel")}
-                label="API Model"
-                data={openAiModels}
-                description="Optional, as some API servers don't provide a model list."
-                allowDeselect={false}
-                disabled={openAiModels.length === 0}
-                searchable
+              {useTextInput ? (
+                <TextInput
+                  {...form.getInputProps("openAiApiModel")}
+                  label="API Model"
+                  description="Enter the model identifier"
+                />
+              ) : (
+                <Select
+                  {...form.getInputProps("openAiApiModel")}
+                  label="API Model"
+                  data={openAiModels}
+                  description="Optional, as some API servers don't provide a model list."
+                  allowDeselect={false}
+                  disabled={openAiModels.length === 0}
+                  searchable
+                />
+              )}
+            </>
+          )}
+
+          {form.values.inferenceType === "horde" && (
+            <>
+              <TextInput
+                label="API Key"
+                description="By default, it's set to '0000000000', for anonymous access. However, anonymous accounts have the lowest priority when there's too many concurrent requests."
+                type="password"
+                {...form.getInputProps("hordeApiKey")}
               />
+              {form.values.hordeApiKey.length > 0 &&
+                form.values.hordeApiKey !== aiHordeDefaultApiKey && (
+                  <Select
+                    label="Model"
+                    description="Optional. When not selected, AI Horde will automatically choose an available model."
+                    placeholder="Auto-selected"
+                    data={hordeModels}
+                    {...form.getInputProps("hordeModel")}
+                    searchable
+                    clearable
+                  />
+                )}
             </>
           )}
 
@@ -226,51 +273,11 @@ export default function AISettingsForm() {
                   <NumberInput
                     label="CPU threads to use"
                     description={
-                      <>
-                        <span>
-                          Number of threads to use for the AI model. Lower
-                          values will use less CPU but may take longer to
-                          respond. A value that is too high may cause the app to
-                          hang.
-                        </span>
-                        {suggestedCpuThreads > defaultSettings.cpuThreads && (
-                          <span>
-                            {" "}
-                            The default value is{" "}
-                            <Text
-                              component="span"
-                              size="xs"
-                              c="blue"
-                              style={{ cursor: "pointer" }}
-                              onClick={() =>
-                                form.setFieldValue(
-                                  "cpuThreads",
-                                  defaultSettings.cpuThreads,
-                                )
-                              }
-                            >
-                              {defaultSettings.cpuThreads}
-                            </Text>
-                            , but based on the number of logical processors in
-                            your CPU, the suggested value is{" "}
-                            <Text
-                              component="span"
-                              size="xs"
-                              c="blue"
-                              style={{ cursor: "pointer" }}
-                              onClick={() =>
-                                form.setFieldValue(
-                                  "cpuThreads",
-                                  suggestedCpuThreads,
-                                )
-                              }
-                            >
-                              {suggestedCpuThreads}
-                            </Text>
-                            .
-                          </span>
-                        )}
-                      </>
+                      <span>
+                        Number of threads to use for the AI model. Lower values
+                        will use less CPU but may take longer to respond. A
+                        value that is too high may cause the app to hang.
+                      </span>
                     }
                     min={1}
                     {...form.getInputProps("cpuThreads")}

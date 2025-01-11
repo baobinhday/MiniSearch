@@ -9,27 +9,29 @@ export const defaultSettings = {
     ? VITE_WEBLLM_DEFAULT_F16_MODEL_ID
     : VITE_WEBLLM_DEFAULT_F32_MODEL_ID,
   wllamaModelId: VITE_WLLAMA_DEFAULT_MODEL_ID,
-  cpuThreads: 1,
+  cpuThreads: Math.max(1, (navigator.hardwareConcurrency ?? 1) - 2),
   searchResultsToConsider: 3,
   searchResultsLimit: 15,
   systemPrompt: `I need assistance with my research, so please provide easy-to-understand responses following these guidelines:
 - Base your responses on the provided search results and your general knowledge about the topic.
 - Answer in the same language in which I ask, with an analytical tone.
-- Include any additional relevant information you think would be good to know.
 - Keep in mind that the current date and time is {{dateTime}}.
 - Use Markdown format, without headers.
-- Use inline citations for any information that is not common knowledge. Place the citation immediately after the fact or quote it supports. Markdown citation format: [[1](https://example.com)], where the number increments for each unique source. Only use URLs that are explicitly provided in the context.
+- Use citations for any information that is not common knowledge. Place the citation immediately after the fact or quote it supports using this Markdown format: [[1](https://example.com)], where the number increments for each unique source. Only use URLs that are explicitly provided in the context.
+- Include any additional relevant information you think would be good to know.
 
 Search results:
 {{searchResults}}`,
   inferenceType: VITE_DEFAULT_INFERENCE_TYPE,
   inferenceTemperature: 0.5,
   inferenceTopP: 0.9,
-  inferenceFrequencyPenalty: 0.5,
-  inferencePresencePenalty: 0.3,
+  inferenceFrequencyPenalty: 0.3,
+  inferencePresencePenalty: 0.1,
   openAiApiBaseUrl: "",
   openAiApiKey: "",
   openAiApiModel: "",
+  hordeApiKey: "0000000000",
+  hordeModel: "",
   enterToSubmit: true,
   enableAiResponseScrolling: true,
   allowAiModelDownload: false,
