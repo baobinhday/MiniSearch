@@ -47,7 +47,7 @@ jobs:
           lfs: true
       - uses: JacobLinCool/huggingface-sync@v1
         with:
-          github: ${{ secrets.GITHUB_TOKEN }}
+          github: ${{ secrets.HF_GITHUB_TOKEN }}
           user: ${{ secrets.HF_USER }}
           space: ${{ secrets.HF_REPO }}
           token: ${{ secrets.HF_TOKEN }}
